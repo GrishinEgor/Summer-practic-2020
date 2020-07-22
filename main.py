@@ -1,4 +1,5 @@
 import tkinter as tk
+import threading
 
 from monitoring import Monitoring
 
@@ -73,20 +74,37 @@ class Application(tk.Tk):
         self.frame.pack(side='left', padx=10, pady=10, expand=1)
         self.report.pack(side='left', pady=10, fill='y')
 
+    # Декоратор, запускающий функцию в отдельном потоке
+    def thread(func):
+        def wrapper(*args, **kwargs):
+            current_thread = threading.Thread(target=func, args=args, kwargs=kwargs)
+            current_thread.start()
 
+        return wrapper
+
+    @thread  # Применение декоратора
     def start(self):
         if self.monitoring.flag:
+            # Делаем кнопки неактивными на время мониторинга
+            self.set_buttons_state('disabled')
+            
             # Выполняются выбранные пункты мониторинга и сообщается информация о том,
             # при выполнении каких из них произошла ошибка. Их чекбоксы становятся заблокированными
             res = self.monitoring.make_stat([i.get() for i in self.arr_active_part])
             for i in range(self.num_parts):
                 if not res[i]:
                     self.arr_checkbutton[i].deselect()
-                    setlf.arr_checkbutton[i]["state"] = 'disabled'
+                    self.arr_checkbutton[i]["state"] = 'disabled'
+
+            # Делаем кнопки обратно рабочими после завершения мониторинга
+            self.set_buttons_state('normal')
 
 
     # Заново выполняет первые обязательные пункты мониторинга
+    @thread  # Применение декоратора
     def reset(self):
+        self.set_buttons_state('disabled')
+        
         del self.monitoring
         self.monitoring = Monitoring(self.report)
         for i in range(self.num_parts):
@@ -96,6 +114,14 @@ class Application(tk.Tk):
             else:
                 self.arr_checkbutton[i].deselect()
                 self.arr_checkbutton[i]["state"] = 'disabled'
+
+        self.set_buttons_state('normal')
+
+        
+    def set_buttons_state(self, state):
+        self.button_start["state"] = state
+        self.button_clear["state"] = state
+        self.button_reset["state"] = state
 
 
 if __name__ == '__main__':

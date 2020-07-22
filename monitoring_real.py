@@ -56,8 +56,9 @@ wine_restart()
 
 
 class Monitoring():
-    num_parts = 6
-    name_parts = ["ФОРМИРОВАНИЕ ДАННЫХ МОНИТОРИНГА",
+    num_parts = 7
+    name_parts = ["СОЗДАНИЕ И ЗАНЕСЕНИЕ ВЫБОРКИ",
+                  "ФОРМИРОВАНИЕ ДАННЫХ МОНИТОРИНГА",
                   "ЗАНЕСЕНИЕ ДАННЫХ МОНИТОРИНГА В БД",
                   "АНАЛИЗ ДАННЫХ МОНИТОРИНГА",
                   "ОБЪЕДИНЕНИЕ ДАННЫХ И ФОРМИРОВАНИЕ ИТОГОВОЙ ИНФОРМАЦИИ",
@@ -105,76 +106,28 @@ class Monitoring():
             ## пути локальные
             print('--- checklocpath', file=self.f_print)
             check_loc_path(self.f, dir_path)
-
-            '''
-                    ЧАСТЬ 2	СОЗДАНИЕ И ЗАНЕСЕНИЕ ВЫБОРКИ
-            '''
-            print("--- osremove", file=self.f_print)
-            ## удаление файлов в рабочей папке
-            osremove(self.dir_path['path_izm_bef_file'], self.f, 0)
-            osremove(self.dir_path['path_bds'], self.f, 1)
-            f.flush()
-                    
-            print("--- copy_measurement_files", file=self.f_print)
-            #### копирование данных на localmachin
-            copy_measurement_files(self.cnx, self.f, self.dir_path, self.day_year, self.year)
-            f.flush()
-            
-            print("--- del_rn2", file=self.f_print)
-            #### удаления повторяющихся файлов во 2ом rinex
-            del_file_rn2(self.dir_path['path_izm_bef_file'], self.f)
-            f.flush()
-                    
-            print('--- copy_nav_file', file=self.f_print)
-            #### копирование навигационных данных
-            ''' flag_efm возвращение 
-                            0 - данных нет от внутренней склейки
-                            1 - данные есть от внутренней склейки'''
-            self.flag_efm = copy_nav_file(self.dir_path, self.day_year, self.year, self.f)
-            self.f.flush()
-            if (self.flag_path == False and self.flag_efm != 1):
-                raise Exception('ОШИБКА: Навигационных данных нет - Завершение работы')
-
-            print('--- unpacking', file=self.f_print)
-            #### разархивирование архивов измерений
-            unpacking_file(self.f, self.dir_path['path_izm_bef_file'], self.dir_path['path_add_pro'])
-            self.f.flush()
-
-            print('--- mov_almanach', file=self.f_print)
-            #### копирование альманхов
-            copy_almanach_file(self.f, self.day, self.month, self.year, self.dir_path)
-
-            if (int(self.hour) < 10):
-                osremove(self.dir_path['path_zona'], self.f, 0)
-
-                print('--- zona', file=self.f_print)
-                #### создание зон
-                zona(self.cnx, self.dir_path, self.year, self.month, self.day, self.day_year, self.f)
-                self.f.flush()
             
         except Exception as err:
-            self.f.write('Неожиданная ошибка при проверке, подготовке путей и создании и занесении выборки: {0}\n'.format(err))
+            self.f.write('Неожиданная ошибка при проверке и подготовке путей: {0}\n'.format(err))
+            self.f.write(u'Выполнение остальных пунктов невозможно\n')
             self.f.flush()
-            print('Неожиданная ошибка при проверке, подготовке путей и создании и занесении выборки: {0}\n'.format(err), file=self.f_print)
-            print('Выполнение остальных пунктов невозможно', file=self.f_print)
-            self.f.write(u'Дальнейшая работа скрипта невозможна-----------------------------------------\n')
-            self.f.flush()
+            print('Неожиданная ошибка при проверке и подготовке путей: {0}'.format(err), file=self.f_print)
+            print('Выполнение остальных пунктов невозможно\n', file=self.f_print)
 
             self.flag = False
             
         finally:
             time_end = time.time()
             if time_end - time_start < 1:
-                self.f.write(u'\n--------------------------------------------------\n')
                 self.f.write(u'Подготовка и проверка путей заняли: {:.3f} сек.\n'.format(time_end - time_start))
-                print('\n--------------------------------------------------\n', file=self.f_print)
-                print('Подготовка и проверка путей заняли: {:.3f} сек.\n'.format(time_end - time_start), file=self.f_print)
+                print('Подготовка и проверка путей заняли: {:.3f} сек.'.format(time_end - time_start), file=self.f_print)
             else:
-                self.f.write(u'\n--------------------------------------------------\n')
                 self.f.write(u'Подготовка и проверка путей заняли: {:.3f} мин.\n'.format((time_end - time_start)/60))
-                print('\n--------------------------------------------------\n', file=self.f_print)
-                print('Подготовка и проверка путей заняли: {:.3f} мин.\n'.format((time_end - time_start)/60), file=self.f_print)
-
+                print('Подготовка и проверка путей заняли: {:.3f} мин.'.format((time_end - time_start)/60), file=self.f_print)
+        
+            self.f.write(u'====================================================\n')
+            self.f.flush()
+            print('====================================================', file=self.f_print)
 
     def __del__(self):
         now_date = datetime.datetime.now()
@@ -184,17 +137,17 @@ class Monitoring():
 
     def make_stat(self, arr_active_part):
         res = [True for i in range(self.num_parts)]
-        func = [self.part1, self.part2, self.part3, self.part4, self.part5, self.part6]
+        func = [self.part1, self.part2, self.part3, self.part4, self.part5, self.part6, self.part7]
         
-        self.f.write('Начало выполнения запроса\n')
+        self.f.write('\nНачало выполнения запроса\n\n')
         self.f.flush()
-        print('Начало выполнения запроса\n', file=self.f_print)
+        print('\nНачало выполнения запроса\n', file=self.f_print)
         
         for i in range(self.num_parts):
             if arr_active_part[i]:
                 time_start = time.time()
                 try:
-                    self.f.write('Выполнение пункта {0}\n'.format(self.name_parts[i]))
+                    self.f.write('Выполнение пункта {0}\n\n'.format(self.name_parts[i]))
                     self.f.flush()
                     print('Выполнение пункта {0}\n'.format(self.name_parts[i]), file=self.f_print)
                     func[i]()
@@ -202,25 +155,77 @@ class Monitoring():
                 except Exception as err:
                     self.f.write('Неожиданная ошибка при выполнении пункта {0}: {1}\n'.format(self.name_parts[i], err))
                     self.f.flush()
-                    print('Неожиданная ошибка при выполнении пункта {0}: {1}\n'.format(self.name_parts[i], err), file=self.f_print)
-                    self.f.flush()
-                    
+                    print('Неожиданная ошибка при выполнении пункта {0}: {1}'.format(self.name_parts[i], err), file=self.f_print)
                     res[i] = False
 
                 finally:
                     time_end = time.time()
                     if time_end - time_start < 1:
-                        self.f.write(u'\n--------------------------------------------------\n')
                         self.f.write(u'Выполнение пункта {} заняло: {:.3f} сек.\n'.format(self.name_parts[i], time_end - time_start))
-                        print('Выполнение пункта {} заняло: {:.3f} сек.\n'.format(self.name_parts[i], time_end - time_start), file=self.f_print)
+                        print('Выполнение пункта {} заняло: {:.3f} сек.'.format(self.name_parts[i], time_end - time_start), file=self.f_print)
                     else:
-                        self.f.write(u'\n--------------------------------------------------\n')
                         self.f.write(u'Выполнение пункта {} заняло: {:.3f} мин.\n'.format(self.name_parts[i], (time_end - time_start)/60))
-                        print('Выполнение пункта {} заняло: {:.3f} мин.\n'.format(self.name_parts[i], (time_end - time_start)/60), file=self.f_print)
+                        print('Выполнение пункта {} заняло: {:.3f} мин.'.format(self.name_parts[i], (time_end - time_start)/60), file=self.f_print)
+                    self.f.flush()
+                    print('----------------------------------------------------', file=self.f_print)
+        
+        self.f.write(u'Выполнение запроса завершено\n')
+        self.f.write(u'====================================================\n')
+        self.f.flush()
+        print('Выполнение запроса завершено', file=self.f_print)
+        print('====================================================', file=self.f_print)
+        
         return res
-                        
+
 
     def part1(self):
+        '''
+                ЧАСТЬ 2	СОЗДАНИЕ И ЗАНЕСЕНИЕ ВЫБОРКИ
+        '''
+        print("--- osremove", file=self.f_print)
+        ## удаление файлов в рабочей папке
+        osremove(self.dir_path['path_izm_bef_file'], self.f, 0)
+        osremove(self.dir_path['path_bds'], self.f, 1)
+        f.flush()
+                
+        print("--- copy_measurement_files", file=self.f_print)
+        #### копирование данных на localmachin
+        copy_measurement_files(self.cnx, self.f, self.dir_path, self.day_year, self.year)
+        f.flush()
+        
+        print("--- del_rn2", file=self.f_print)
+        #### удаления повторяющихся файлов во 2ом rinex
+        del_file_rn2(self.dir_path['path_izm_bef_file'], self.f)
+        f.flush()
+                
+        print('--- copy_nav_file', file=self.f_print)
+        #### копирование навигационных данных
+        ''' flag_efm возвращение 
+                        0 - данных нет от внутренней склейки
+                        1 - данные есть от внутренней склейки'''
+        self.flag_efm = copy_nav_file(self.dir_path, self.day_year, self.year, self.f)
+        self.f.flush()
+        if (self.flag_path == False and self.flag_efm != 1):
+            raise Exception('ОШИБКА: Навигационных данных нет - Завершение работы')
+
+        print('--- unpacking', file=self.f_print)
+        #### разархивирование архивов измерений
+        unpacking_file(self.f, self.dir_path['path_izm_bef_file'], self.dir_path['path_add_pro'])
+        self.f.flush()
+
+        print('--- mov_almanach', file=self.f_print)
+        #### копирование альманхов
+        copy_almanach_file(self.f, self.day, self.month, self.year, self.dir_path)
+
+        if (int(self.hour) < 10):
+            osremove(self.dir_path['path_zona'], self.f, 0)
+
+            print('--- zona', file=self.f_print)
+            #### создание зон
+            zona(self.cnx, self.dir_path, self.year, self.month, self.day, self.day_year, self.f)
+            self.f.flush()
+
+    def part2(self):
         '''
                 ЧАСТЬ 3	ФОРМИРОВАНИЕ ДАННЫХ МОНИТОРИНГА
         '''
@@ -239,7 +244,7 @@ class Monitoring():
         copy_sat_sol_file(self.f, self.dir_path['path_bds'], self.dir_path['path_sat_sol'], self.day_year)
         self.f.flush()  
 
-    def part2(self):
+    def part3(self):
         '''
                 ЧАСТЬ 4 ЗАНЕСЕНИЕ ДАННЫХ МОНИТОРИНГА В БД
         '''
@@ -259,7 +264,7 @@ class Monitoring():
         almanach(self.cnx, self.f, self.day, self.month, self.year, self.day_year, self.dir_path)
         self.f.flush()
 
-    def part3(self):
+    def part4(self):
         '''
                 ЧАСТЬ 5.2 АНАЛИЗ ДАННЫХ МОНИТОРИНГА
         '''
@@ -288,7 +293,7 @@ class Monitoring():
                 mon_spans_met(self.cnx, self.f, self.year, self.month, self.day)
         
 
-    def part4(self):
+    def part5(self):
         '''
                 ЧАСТЬ 5.3 ОБЪЕДИНЕНИЕ ДАННЫХ И ФОРМИРОВАНИЕ ИТОГОВОЙ ИНФОРМАЦИИ
         '''
@@ -309,7 +314,7 @@ class Monitoring():
         ##### формирование промежутков точности
         ###сreate_spans(cnx,'blt_spans',f,year,month,day)
 
-    def part5(self):
+    def part6(self):
         '''
                 ЧАСТЬ 6	ФОРМИРОВАНИЕ ХАРАКТЕРИСТИК ФУНКЦИОНИРОВАНИЯ СИСТЕМЫ
         '''
@@ -322,7 +327,7 @@ class Monitoring():
         ####russer(cursor,f,cnx,year,month,day,day_year,path_root,path_pdf+'/doctext')
         ###print('russer_end')
 
-    def part6(self):
+    def part7(self):
         '''
                 ЧАСТЬ 7	ФОРМИРОВАНИЕ БЮЛЛЕТЕНЯ
         '''
