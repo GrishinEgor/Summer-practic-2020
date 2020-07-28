@@ -1,5 +1,6 @@
 import tkinter as tk
 import threading
+import sys
 
 from monitoring import Monitoring
 
@@ -37,9 +38,10 @@ class Application(tk.Tk):
         tk.Tk.title(self, "Мониторинг")
 
         self.report = Report(self, width=80)
+        sys.stdout = self.report
 
         # Объект мониторинга определяет количество независимых пунктов и их имена
-        self.monitoring = Monitoring(self.report)
+        self.monitoring = Monitoring()
         self.num_parts = self.monitoring.num_parts
         self.name_parts = self.monitoring.name_parts
 
@@ -106,7 +108,7 @@ class Application(tk.Tk):
         self.set_buttons_state('disabled')
         
         del self.monitoring
-        self.monitoring = Monitoring(self.report)
+        self.monitoring = Monitoring()
         for i in range(self.num_parts):
             if self.monitoring.flag:
                 self.arr_checkbutton[i].select()
